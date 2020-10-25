@@ -35,7 +35,7 @@ ENV JAVA_OPTS=""
 
 ENTRYPOINT exec java $JAVA_OPTS -jar /app.jar
 
-##Provide a Sample Front End ./SampleFrontEnd
+## Provide a Sample Front End ./SampleFrontEnd
 
 To start the server for front side:
 
