@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script  type="text/javascript" src="js/jquery-3.1.1.min.js" ></script>
+    <script type="text/javascript" src="js/bootstrap.min.js" ></script>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+    <title>Transaction List Page</title>
+</head>
+<body>
+<div class="container">
+    <div id="searchingarea">
+        <form>
+            <table id="table-search" width="80%" class="table table-hover">
+                <tr>
+                    <td>Account Number: <input type="text" id="accountNumber" value="585309209" disabled="true"></td>
+                    <td><br></td>
+                    <td><button type="button" id="btSearch" class="btn btn-default" onclick="searchTransactions();">Search</button></td>
+                </tr>
+            </table>
+        </form>
+    </div>
+
+    <div id="resulttable">
+        <table><tr>
+            <td><span>Total Pages: </span><span id="totalPages">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>Current Page: </span><span id="currentPage">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>Totoal Records: </span><span id="totalRecords">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>&nbsp;</span></td>
+            <td><button type="button" id="firstPage" class="btn btn-success" disabled="true" value="First" onclick="searchTransactions('first');">First Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="prePage" class="btn btn-success" disabled="true" value="Prev" onclick="searchTransactions('prev');">Prev Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="nextPage" class="btn btn-success" disabled="true" value="Next" onclick="searchTransactions('next');">Next Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="lastPage" class="btn btn-success" disabled="true" value="Last" onclick="searchTransactions('last');">Last Page</button><span>&nbsp;</span></td>
+        </tr>
+        </table>
+        <table id="transactions" class="table table-hover">
+            <thead>
+                <tr>
+                    <th data-name="accountNumber">Account Number </th>
+                    <th data-name="accountName">Account Name</th>
+                    <th data-name="valueDate">Value Date</th>
+                    <th data-name="accountCurrency">Currency</th>
+                    <th data-name="debitAmount">Debit Amount</th>
+                    <th data-name="creditAmount">Credit Amount</th>
+                    <th date-name="transactionType">Debit/Credit</th>
+                    <th data-name="transactionNarrative">Transaction Narrative</th>
+                </tr>
+            </thead>
+            <tbody id="transactionsTableBody">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+<script>
+
+    var accountsMap = {};
+
+    $().ready(function(){
+        var accountNumber = getUrlParam("accountnumber");
+        console.log(accountNumber);
+        $("#accountNumber").val(accountNumber);
+        searchTransactions("begin");
+    });
+
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]);
+        return null;
+    }
+
+    function searchTransactions(pageMode) {
+
+        var accountNumber = $("#accountNumber").val();
+        var urlStr = "";
+
+        switch(pageMode){
+            case 'first':
+                urlStr = $("#firstPage").val();
+                break;
+            case 'prev':
+                urlStr = $("#prePage").val();
+                break;
+            case 'next':
+                urlStr = $("#nextPage").val();
+                break;
+            case 'last':
+                urlStr = $("#lastPage").val();
+                break;
+            default:
+                urlStr = "http://localhost:8080/api/v1/transactions/querybyaccount/"+accountNumber;
+        }
+
+        console.log("Search "+urlStr);
+
+        accountsMap = {};
+        $.ajax({
+            url: urlStr,
+            contentType: 'application/json',
+            dataType: "json",
+            crossDomain: true,
+            success: function (data) {
+                refreshResultTable(data);
+            },
+            error: function (jqXHR, text, errorThrown) {
+                console.log(jqXHR + " " + text + " " + errorThrown);
+                alert("Retrieving accounts transactions failed, could not find any records!")
+            },
+            headers: {'Access-Control-Allow-Origin': '*'}
+            });
+    }
+
+    function refreshResultTable(data){
+        try {
+            console.log(data);
+
+            //Set the page values
+            var pagevalue = data["page"];
+            var currentPage = pagevalue["number"];
+            var totalPages = pagevalue['totalPages'];
+            var totalRecords = pagevalue['totalElements'];
+
+            $("#totalPages").text(totalPages);
+            $("#currentPage").text(currentPage);
+            $("#totalRecords").text(totalRecords);
+
+            if( totalRecords == 0){
+                alert("Cannot find transactions for account "+$("#accountNumber").val());
+                return;
+            }
+
+            console.log(currentPage);
+            if(totalPages > 1) {
+                //Set the page navigation
+                var links = data["_links"];
+
+                if (currentPage == 0)
+                    $("#prePage").prop("disabled", true);
+                else {
+                    $("#prePage").val(links['prev']['href']);
+                    $("#prePage").prop("disabled", false);
+                }
+
+                if (currentPage == totalPages - 1)
+                    $("#nextPage").prop('disabled', true);
+                else {
+                    $("#nextPage").val(links['next']['href']);
+                    $("#nextPage").prop('disabled', false);
+                }
+
+                $("#firstPage").val(links['first']['href']);
+                $("#firstPage").prop('disabled', false);
+
+                $("#lastPage").val(links['last']['href']);
+                $("#lastPage").prop('disabled', false);
+            }
+            else
+            {
+                $("#prePage").prop("disabled", true);
+                $("#nextPage").prop('disabled', true);
+                $("#firstPage").prop('disabled', true);
+                $("#lastPage").prop('disabled', true);
+            }
+
+            var transactionsRows = data['_embedded']['accountTransViewInfoes'];
+            var size = transactionsRows.length;
+            if( size <= 0 )
+                return;
+
+            $("#transactionsTableBody").empty();
+
+            for(var i=0;i<size;i++){
+                var rowvalue = transactionsRows[i];
+                console.log(rowvalue);
+                //H2 uses all capital for fields, MySql uses Camel.
+                var accountHref = "http://localhost:8083/account.html?userId="+rowvalue['accountUserId'];
+                var trString = "<tr>"+"<td><a href='"+accountHref+"'>"+rowvalue['accountNumber']+"</a></td>"+
+                    "<td>"+rowvalue['accountName']+"</td>"+
+                    "<td>"+rowvalue['valueDate'].substr(0,10)+"</td>"+
+                    "<td>"+rowvalue['accountCurrency']+"</td>"+
+                    "<td>"+rowvalue['debitAmount']+"</td>"+
+                    "<td>"+rowvalue['creditAmount']+"</td>"+
+                    "<td>"+rowvalue['transactionType']+"</td>"+
+                    "<td>"+rowvalue['transactionNarrative']+"</td>"+"</tr>";
+
+                console.log(trString);
+                $("#transactionsTableBody").append(trString);
+            }
+
+        }
+        catch (err){
+            console.log(err)
+            alert("Parsing transactions for account failed.");
+        }
+    }
+</script>
+</html>

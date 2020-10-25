@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script  type="text/javascript" src="js/jquery-3.1.1.min.js" ></script>
+    <script type="text/javascript" src="js/bootstrap.min.js" ></script>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+    <title>Account List Page</title>
+</head>
+<body>
+<div class="container">
+    <div id="searchingarea">
+        <form>
+            <table id="table-search" width="80%" class="table table-hover">
+                <tr>
+                    <td>User Id: <input type="text" id="userid" value="123" disabled="true"></td>
+                    <td><br></td>
+                    <td><button type="button" id="btSearch" class="btn btn-default" onclick="searchAccounts();">Search</button></td>
+                </tr>
+            </table>
+        </form>
+    </div>
+
+    <div id="resulttable">
+        <table><tr>
+            <td><span>Total Pages: </span><span id="totalPages">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>Current Page: </span><span id="currentPage">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>Totoal Records: </span><span id="totalRecords">0</span></td><td><span>&nbsp;</span></td>
+            <td><span>&nbsp;</span></td>
+            <td><button type="button" id="firstPage" class="btn btn-success" disabled="true" value="First" onclick="searchAccounts('first');">First Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="prePage" class="btn btn-success" disabled="true" value="Prev" onclick="searchAccounts('prev');">Prev Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="nextPage" class="btn btn-success" disabled="true" value="Next" onclick="searchAccounts('next');">Next Page</button><span>&nbsp;</span></td>
+            <td><button type="button" id="lastPage" class="btn btn-success" disabled="true" value="Last" onclick="searchAccounts('last');">Last Page</button><span>&nbsp;</span></td>
+        </tr>
+        </table>
+        <table id="accounts" class="table table-hover">
+            <thead>
+                <tr>
+                    <th data-name="accountNumber">Account Number </th>
+                    <th data-name="accountName">Account Name</th>
+                    <th data-name="accountType">Account Type</th>
+                    <th data-name="balanceDate">Balance Date</th>
+                    <th data-name="accountCurrency">Currency</th>
+                    <th data-name="availableBalance">Opening Available Balance</th>
+                </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+<script>
+
+    $().ready(function(){
+        var userId = getUrlParam("userId");
+        console.log(userId);
+        if( userId != null)
+            $("#userId").val(userId);
+        searchAccounts("begin");
+    });
+
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]);
+        return null;
+    }
+
+    function searchAccounts(pageMode) {
+
+        var userid = $("#userid").val();
+        var urlStr = "";
+
+        switch(pageMode){
+            case 'first':
+                urlStr = $("#firstPage").val();
+                break;
+            case 'prev':
+                urlStr = $("#prePage").val();
+                break;
+            case 'next':
+                urlStr = $("#nextPage").val();
+                break;
+            case 'last':
+                urlStr = $("#lastPage").val();
+                break;
+            default:
+                urlStr = "http://localhost:8080/api/v1/accounts/querybyuser/"+userid;
+        }
+
+        console.log("Search "+urlStr);
+
+        $.ajax({
+            url: urlStr,
+            contentType: 'application/json',
+            dataType: "json",
+            crossDomain: true,
+            success: function (data) {
+                refreshResultTable(data);
+            },
+            error: function (jqXHR, text, errorThrown) {
+                console.log(jqXHR + " " + text + " " + errorThrown);
+                alert("Could not find user 123's accounts!")
+            },
+            headers: {'Access-Control-Allow-Origin': '*'}
+            });
+    }
+
+    function refreshResultTable(data){
+        try {
+            console.log(data);
+
+            //Set the page values
+            var pagevalue = data["page"];
+            var currentPage = pagevalue["number"];
+            var totalPages = pagevalue['totalPages'];
+            var totalRecords = pagevalue['totalElements'];
+            $("#totalPages").text(totalPages);
+            $("#currentPage").text(currentPage);
+            $("#totalRecords").text(totalRecords);
+
+            if( totalRecords == 0){
+                alert("Cannot find Accounts for user "+$("#userid").val());
+                return;
+            }
+
+            if(totalPages > 1) {
+                console.log(currentPage);
+                //Set the page navigation
+                var links = data["_links"];
+
+                if (currentPage == 0)
+                    $("#prePage").prop("disabled", true);
+                else {
+                    $("#prePage").val(links['prev']['href']);
+                    $("#prePage").prop("disabled", false);
+                }
+
+                if (currentPage == totalPages - 1)
+                    $("#nextPage").prop('disabled', true);
+                else {
+                    $("#nextPage").val(links['next']['href']);
+                    $("#nextPage").prop('disabled', false);
+                }
+
+                $("#firstPage").val(links['first']['href']);
+                $("#firstPage").prop('disabled', false);
+
+                $("#lastPage").val(links['last']['href']);
+                $("#lastPage").prop('disabled', false);
+            }
+            else
+            {
+                $("#prePage").prop("disabled", true);
+                $("#nextPage").prop('disabled', true);
+                $("#firstPage").prop('disabled', true);
+                $("#lastPage").prop('disabled', true);
+            }
+
+            var accountsRows = data['_embedded']['accounts'];
+            var size = accountsRows.length;
+            if( size <= 0 )
+                return;
+
+            $("#accountsTableBody").empty();
+
+            for(var i=0;i<size;i++){
+                var rowvalue = accountsRows[i];
+                console.log(rowvalue);
+                var transactionHref = "http://localhost:8083/transactions.html?accountnumber="+rowvalue['accountNumber'];
+                var trString = "<tr>"+"<td><a href='"+transactionHref+"'>"+rowvalue['accountNumber']+"</a></td>"+
+                    "<td>"+rowvalue['accountName']+"</td>"+
+                    "<td>"+rowvalue['accountType']+"</td>"+
+                    "<td>"+rowvalue['balanceDate'].substr(0,10)+"</td>"+
+                    "<td>"+rowvalue['accountCurrency']+"</td>"+
+                    "<td>"+rowvalue['availableBalance']+"</td>"+"</tr>";
+
+                console.log(trString);
+                $("#accountsTableBody").append(trString);
+            }
+
+        }
+        catch (err){
+            console.log(err)
+            alert("Parsing accounts for user 123 failed.");
+        }
+    }
+</script>
+</html>
