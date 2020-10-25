@@ -24,16 +24,17 @@
 ## Docker File
 
 FROM openjdk:11-jre-slim
-
 VOLUME /tmp
-
 ADD target/sampleproject-0.0.1-SNAPSHOT.jar /app.jar
-
 EXPOSE 8080
-
 ENV JAVA_OPTS=""
-
 ENTRYPOINT exec java $JAVA_OPTS -jar /app.jar
+
+To build docker image: Under project folder,
+
+docker build -t sampleproject .
+
+docker run -d -p 8080:8080 --name sample-app sampleproject
 
 ## Provide a Sample Front End ./SampleFrontEnd
 
