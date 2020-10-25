@@ -1,4 +1,4 @@
-# Sample Project for iGreenData
+# Sample Project for CGI/ANZ
 
 ## Environment
 - IDEA 2019.2
