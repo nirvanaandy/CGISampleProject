@@ -42,7 +42,7 @@ public class AccountTransactionServiceImpl implements AccountTransactionService 
     }
 
     @Override
-    //@Cacheable(value = "findTransactionByAccountNumberUsingViewCache", key = "#accountNumber + #pageable.offset + #pageable.pageSize")
+    @Cacheable(value = "findTransactionByAccountNumberUsingViewCache", key = "#accountNumber + #pageable.offset + #pageable.pageSize")
     public Page<AccountTransViewInfo> findTransactionByAccountNumberUsingView(String accountNumber, Pageable pageable) {
 
         Page<AccountTransViewInfo> results = transactionRepository.findTransactionByAccountNumberUsingView(accountNumber, pageable);

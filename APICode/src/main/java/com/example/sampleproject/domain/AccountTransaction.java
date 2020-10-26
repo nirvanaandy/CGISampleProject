@@ -2,6 +2,8 @@ package com.example.sampleproject.domain;
 
 import org.springframework.hateoas.RepresentationModel;
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Past;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -13,12 +15,16 @@ public class AccountTransaction extends RepresentationModel<AccountTransaction> 
 
     @Id
     @GeneratedValue
+    @NotNull(message = "Transaction ID should not be null.")
     private long id;
 
+    @Past(message = "Value Date must be past time.")
     private Date valueDate;
 
+    @NotNull(message = "Debit Amount must not be null.")
     private BigDecimal debitAmount;
 
+    @NotNull(message = "Credit Amount must not be null.")
     private BigDecimal creditAmount;
 
     @Column(length = 10)
@@ -26,10 +32,12 @@ public class AccountTransaction extends RepresentationModel<AccountTransaction> 
     private TransactionTypeEnum transactionType;
 
     @Column(length = 50)
+    @NotNull(message = "Transaction Narrative must not be null.")
     private String transactionNarrative;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.MERGE)
     @JoinColumn(name = "belonged_account")
+    @NotNull(message = "Belonged Account must not be null.")
     private Account belongedAccount;
 
     public AccountTransaction() {

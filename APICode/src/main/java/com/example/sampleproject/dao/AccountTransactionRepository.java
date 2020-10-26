@@ -13,7 +13,7 @@ import java.util.Map;
 @Repository
 public interface AccountTransactionRepository extends JpaRepository<AccountTransaction,Long> {
 
-    //Use JPQL select new View()
+    //Use JPQL select a new View(Account, AccountTransaction)
     @Query(value="select new com.example.sampleproject.domain.AccountTransViewInfo(a.accountNumber, a.accountName, a.accountCurrency, "+
             " t.debitAmount, t.creditAmount, t.transactionType, t.valueDate, t.transactionNarrative, a.accountUserId) from Account a, AccountTransaction t" +
             " where a.accountNumber = ?1 and t.belongedAccount.accountNumber = a.accountNumber order by t.valueDate")

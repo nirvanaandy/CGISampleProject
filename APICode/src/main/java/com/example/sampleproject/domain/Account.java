@@ -2,11 +2,15 @@ package com.example.sampleproject.domain;
 
 import org.springframework.hateoas.RepresentationModel;
 import javax.persistence.*;
+import javax.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Date;
 
+/**
+ * @author leima
+ */
 @Entity
 public class Account extends RepresentationModel<Account> implements Serializable {
 
@@ -14,22 +18,27 @@ public class Account extends RepresentationModel<Account> implements Serializabl
 
     @Id
     @Column(length = 9)
+    @NotBlank(message = "Account Number should not be blank.")
     private String accountNumber;
 
     @Column(length = 20)
+    @NotBlank(message = "Account Number should not be blank.")
     private String accountName;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 10)
     private AccountTypeEnum accountType;
 
+    @Past(message = "Balance Date must be past time.")
     private Date balanceDate;
 
     @Column(length = 3)
     private Currency accountCurrency;
 
+    @NotNull(message = "Available Balance should not be null.")
     private BigDecimal availableBalance;
 
+    @NotNull(message = "Belonged User ID should not be null.")
     private Integer accountUserId;
 
     public Account() {

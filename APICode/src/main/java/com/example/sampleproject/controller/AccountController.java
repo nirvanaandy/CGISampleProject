@@ -5,10 +5,10 @@ import com.example.sampleproject.domain.Account;
 import com.example.sampleproject.handler.AccountsNotFoundException;
 import com.example.sampleproject.handler.UpdateFailureException;
 import com.example.sampleproject.service.AccountService;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +17,10 @@ import org.springframework.hateoas.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.Objects;
 import java.util.List;
 
@@ -46,9 +50,42 @@ public class AccountController {
         return new CollectionModel(resultList);
     }
 
+    /**
+     * @Description: Query all the accounts belongs to an user id
+     * @param userId
+     * @param pageRequest
+     * @param assembler
+     * @return
+     */
+    @GetMapping("/querybyuser/{userid}")
+    public PagedModel<EntityModel<Account>> getAccountsByUserId(@NotNull @PathVariable("userid") final int userId,
+                                                                Pageable pageRequest,
+                                                                PagedResourcesAssembler<Account> assembler){
+
+        logger.info("Query accounts by userId "+userId);
+
+        int pageSize = appSettingConfig.getPageSize();
+        Pageable pageable = PageRequest.of(pageRequest.getPageNumber(),pageSize,pageRequest.getSort());
+
+        Page<Account> accounts = accountService.findAccoutsByUserId(userId, pageable);
+
+        if( Objects.isNull(accounts)) {
+            logger.error("Failed to find account for user " + userId);
+            throw new AccountsNotFoundException();
+        }
+
+        //Add links to related transactions for each account
+        accounts.forEach(account -> {
+            Link linkToTransactions = linkTo(methodOn(AccountTransactionController.class).getTransactionsByAccountNumber(account.getAccountNumber(), null, null)).withRel("Transactions");
+            account.add(linkToTransactions);
+        });
+
+        return assembler.toModel(accounts);
+    }
+
     @GetMapping("/{accountnumber}")
     @ResponseBody
-    public EntityModel<Account> getAccountByNumber(@PathVariable("accountnumber") final String accountNumber){
+    public EntityModel<Account> getAccountByNumber(@PathVariable("accountnumber") @NotBlank final String accountNumber){
 
         logger.info("Query account by number "+accountNumber);
 
@@ -62,7 +99,7 @@ public class AccountController {
     }
 
     @PostMapping("")
-    public EntityModel<Account> createAccount(@NotNull @RequestBody Account account){
+    public EntityModel<Account> createAccount(@Valid @RequestBody Account account){
 
         logger.info("Create a new Account with number: " + account.getAccountNumber());
 
@@ -79,7 +116,7 @@ public class AccountController {
 
     @DeleteMapping("/{accountNumber}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public @ResponseBody void deleteAccountByAccountNumber(@NotNull @PathVariable String accountNumber){
+    public @ResponseBody void deleteAccountByAccountNumber(@NotBlank @PathVariable String accountNumber){
 
         logger.info("Delete account having number: " + accountNumber);
 
@@ -88,32 +125,6 @@ public class AccountController {
             accountService.deleteAccount(account);
         else
             throw new AccountsNotFoundException();
-    }
-
-    @GetMapping("/querybyuser/{userid}")
-    public PagedModel<EntityModel<Account>> getAccountsByUserId(@NotNull @PathVariable("userid") final int userId,
-                                                               Pageable pageRequest,
-                                                               PagedResourcesAssembler<Account> assembler){
-
-        logger.info("Query accounts by userId "+userId);
-
-        int pageSize = appSettingConfig.getPageSize();
-        Pageable pageable = PageRequest.of(pageRequest.getPageNumber(),pageSize,pageRequest.getSort());
-
-        Page<Account> accounts = accountService.findAccoutsByUserId(userId, pageable);
-
-        if( Objects.isNull(accounts)) {
-            logger.error("Failed to find account for user " + userId);
-            throw new AccountsNotFoundException();
-        }
-
-        //Add links to related transactions for each account
-        accounts.forEach(account -> {
-           Link linkToTransactions = linkTo(methodOn(AccountTransactionController.class).getTransactionsByAccountNumber(account.getAccountNumber(), null, null)).withRel("Transactions");
-           account.add(linkToTransactions);
-        });
-
-        return assembler.toModel(accounts);
     }
 
 }
